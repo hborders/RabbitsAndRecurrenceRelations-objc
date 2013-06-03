@@ -32,18 +32,19 @@ void printUsage() {
           );
 }
 
-typedef struct Generation {
-    NSUInteger matureCount;
-    NSUInteger youngCount;
-} Generation;
+@interface Generation : NSObject
 
-Generation nextGenerationWithGenerationAndLitterSize(Generation generation, NSUInteger litterSize) {
-    Generation nextGeneration = {
-        .matureCount = generation.matureCount + generation.youngCount,
-        .youngCount = generation.matureCount * litterSize,
-    };
-    return nextGeneration;
-}
+@property (nonatomic, readonly) NSUInteger size;
+
+- (id)initWithMatureCount:(NSUInteger)matureCount
+               youngCount:(NSUInteger)youngCount
+               litterSize:(NSUInteger)litterSize;
+
+- (instancetype)nextGeneration;
+
++ (instancetype)firstGenerationWithLitterSize:(NSUInteger)litterSize;
+
+@end
 
 int main(int argc, const char * argv[])
 {
@@ -54,16 +55,12 @@ int main(int argc, const char * argv[])
             if (NSLocationInRange(generationCount, GenerationCountRange)) {
                 NSUInteger litterSize = unsignedIntegerFromASCIICString(argv[2]);
                 if (NSLocationInRange(litterSize, LitterSizeRange)) {
-                    Generation generation = {
-                        .matureCount = 0,
-                        .youngCount = 1,
-                    };
+                    Generation *generation = [Generation firstGenerationWithLitterSize:litterSize];
                     for (NSUInteger nextGenerationIndex = 1; nextGenerationIndex < generationCount; nextGenerationIndex++) {
-                        generation = nextGenerationWithGenerationAndLitterSize(generation,
-                                                                               litterSize);
+                        generation = [generation nextGeneration];
                     }
                     
-                    printf("%s\n", [[@(generation.matureCount + generation.youngCount) stringValue] cStringUsingEncoding:NSASCIIStringEncoding]);
+                    printf("%s\n", [[@(generation.size) stringValue] cStringUsingEncoding:NSASCIIStringEncoding]);
                     returnVal = RARRErrorCodesValid;
                 } else {
                     returnVal = RARRErrorCodesLitterSize;
@@ -82,4 +79,46 @@ int main(int argc, const char * argv[])
     
     return returnVal;
 }
+
+@interface Generation ()
+
+@property (nonatomic) NSUInteger matureCount;
+@property (nonatomic) NSUInteger youngCount;
+@property (nonatomic) NSUInteger litterSize;
+
+@end
+
+@implementation Generation
+
+- (id)initWithMatureCount:(NSUInteger)matureCount
+               youngCount:(NSUInteger)youngCount
+               litterSize:(NSUInteger)litterSize {
+    self = [super init];
+    if (self) {
+        self.matureCount = matureCount;
+        self.youngCount = youngCount;
+        self.litterSize = litterSize;
+    }
+    
+    return self;
+}
+
+- (NSUInteger)size {
+    return self.matureCount + self.youngCount;
+}
+
+- (instancetype)nextGeneration {
+    Generation *nextGeneration = [[[self class] alloc] initWithMatureCount:self.matureCount + self.youngCount
+                                                                youngCount:self.matureCount * self.litterSize
+                                                                litterSize:self.litterSize];
+    return nextGeneration;
+}
+
++ (instancetype)firstGenerationWithLitterSize:(NSUInteger)litterSize {
+    return [[self alloc] initWithMatureCount:0
+                                  youngCount:1
+                                  litterSize:litterSize];
+}
+
+@end
 
